@@ -1,0 +1,23 @@
+# Python
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# AWS
+.aws/
+
+# OS
+.DS_Store
+*.log
+
+# Test files
+test_resume.txt
+downloaded.txt
+get-pip.py
+**/.env

@@ -1,0 +1,122 @@
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
+from database import get_db
+import models
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ── Password Hashing ──────────────────────────────────────────────────────────
+
+# This tells passlib: use bcrypt algorithm for hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    """
+    Takes plain text password → returns bcrypt hash
+    "mypass123" → "$2b$12$KIX..."
+    """
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """
+    Takes plain text + stored hash → returns True or False
+    Used during login to check if password is correct
+    """
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+# ── JWT Token ─────────────────────────────────────────────────────────────────
+
+SECRET_KEY = os.getenv("SECRET_KEY")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+
+def create_access_token(data: dict) -> str:
+    """
+    Creates a signed JWT token.
+
+    data = { "user_id": 5, "email": "john@gmail.com" }
+
+    Steps:
+    1. Copy the data
+    2. Add expiry time to the payload
+    3. Sign it with SECRET_KEY
+    4. Return the token string
+    """
+    to_encode = data.copy()
+
+    # Set expiry time
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+
+    # Sign and encode the token
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def verify_token(token: str) -> Optional[dict]:
+    """
+    Verifies a JWT token.
+
+    Returns the payload if valid.
+    Returns None if invalid or expired.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        return payload
+    except JWTError:
+        return None
+
+
+# ── Current User Dependency ───────────────────────────────────────────────────
+
+# This tells FastAPI: look for a Bearer token in the Authorization header
+# Example header: Authorization: Bearer eyJ...
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    """
+    This is a DEPENDENCY.
+    Any route that needs authentication adds this as a parameter.
+
+    FastAPI automatically:
+    1. Extracts the Bearer token from the request header
+    2. Calls this function
+    3. Passes the result to the route handler
+
+    If token is invalid → raises 401 automatically
+    If token is valid → returns the user object from DB
+    """
+
+    # Define the error we will raise if anything is wrong
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+    # Verify the token
+    payload = verify_token(token)
+    if payload is None:
+        raise credentials_exception
+
+    # Extract user_id from payload
+    user_id: int = payload.get("user_id")
+    if user_id is None:
+        raise credentials_exception
+
+    # Get user from database
+    user = db.query(models.User).filter(models.User.id == user_id).first()
+    if user is None:
+        raise credentials_exception
+
+    return user

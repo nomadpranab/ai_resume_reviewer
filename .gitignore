@@ -21,3 +21,4 @@ test_resume.txt
 downloaded.txt
 get-pip.py
 **/.env
+backend/.env.docker

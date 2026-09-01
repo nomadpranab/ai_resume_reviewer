@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { resumeApi, reviewApi } from '../services/api'
+import { resumeApi} from '../services/api'
 
 export default function Upload() {
   const navigate = useNavigate()

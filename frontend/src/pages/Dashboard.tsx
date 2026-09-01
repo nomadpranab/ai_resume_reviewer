@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import type { Review, Improvement } from '../types'
-import { reviewApi } from '../services/api'
 
 // ── ATS Score Ring ────────────────────────────────────────────────────────────
 function ScoreRing({ score }: { score: number }) {
@@ -94,7 +93,7 @@ function ScoreRing({ score }: { score: number }) {
 export default function Dashboard() {
   const { reviewId } = useParams()
   const navigate = useNavigate()
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
 
   const [review, setReview] = useState<Review | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -102,29 +101,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!reviewId) return
-
-    // We already have the review data from Processing page
-    // Fetch it from the review history
-    const fetchReview = async () => {
-      try {
-        // Get review history for this session
-        // We store the full review in state via navigate
-        const state = window.history.state
-        if (state?.review) {
-          setReview(state.review)
-        } else {
-          // Fallback: fetch from API using sessionStorage
-          const stored = sessionStorage.getItem(`review_${reviewId}`)
-          if (stored) {
-            setReview(JSON.parse(stored))
-          }
-        }
-      } catch (err) {
-        setError('Could not load review data')
-      } finally {
-        setIsLoading(false)
-      }
-    }
 
     // Check sessionStorage for the review
     const stored = sessionStorage.getItem(`review_${reviewId}`)

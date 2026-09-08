@@ -62,6 +62,15 @@ jobs:
     needs: build-and-push  # only runs after build succeeds
 
     steps:
+      - name: Copy nginx config to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host:     ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key:      ${{ secrets.EC2_SSH_KEY }}
+          source:   "nginx/nginx.conf"
+          target:   "/home/ubuntu/app/"
+
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:

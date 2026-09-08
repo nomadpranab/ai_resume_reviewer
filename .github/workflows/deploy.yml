@@ -70,7 +70,7 @@ jobs:
           key:         ${{ secrets.EC2_SSH_KEY }}
           script: |
             # Login to ECR
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
+              /home/ubuntu/.local/bin/aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | \
               docker login \
               --username AWS \
               --password-stdin \

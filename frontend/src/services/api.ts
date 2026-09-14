@@ -53,6 +53,7 @@ export const resumeApi = {
     })
   },
   list: () => api.get('/api/resume/list'),
+  history: () => api.get('/api/resume/history'),
   getDownloadUrl: (resumeId: number) =>
     api.get(`/api/resume/${resumeId}/download`),
   delete: (resumeId: number) => api.delete(`/api/resume/${resumeId}`),

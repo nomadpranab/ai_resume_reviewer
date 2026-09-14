@@ -86,8 +86,6 @@ def analyze_resume(
         overall_feedback=ai_result["overall_feedback"],
         skill_gaps=json.dumps(ai_result["skill_gaps"]),
         improvements=json.dumps(ai_result["improvements"]),
-        keywords_missing = json.dumps(ai_result.get("keywords_missing", [])),
-        strengths        = json.dumps(ai_result.get("strengths", [])),
     )
 
     db.add(review)
@@ -114,12 +112,6 @@ def get_review_history(
     db: Session = Depends(get_db),
     current_user: models.User = Depends(get_current_user)
 ):
-    """
-    Get all reviews for a specific resume.
-    Shows how the resume improved over time.
-    """
-
-    # Verify resume belongs to current user
     resume = db.query(models.Resume).filter(
         models.Resume.id == resume_id
     ).first()
@@ -130,24 +122,22 @@ def get_review_history(
     if resume.user_id != current_user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
-    # Get all reviews for this resume
     reviews = db.query(models.Review).filter(
         models.Review.resume_id == resume_id
     ).order_by(models.Review.created_at.desc()).all()
 
-    # Parse JSON strings back to lists
     result = []
     for review in reviews:
         result.append({
-            "review_id": review.id,
-            "ats_score": review.ats_score,
+            "review_id":        review.id,
+            "resume_id":        resume_id,
+            "ats_score":        review.ats_score,
             "overall_feedback": review.overall_feedback,
-            "skill_gaps": json.loads(review.skill_gaps),
-            "improvements": json.loads(review.improvements),
-            "keywords_missing": json.loads(review.keywords_missing),
-            "strengths":        json.loads(review.strengths),
-            "created_at": review.created_at
-
+            "skill_gaps":       json.loads(review.skill_gaps),
+            "improvements":     json.loads(review.improvements),
+            "keywords_missing": [],   # not stored — return empty
+            "strengths":        [],   # not stored — return empty
+            "created_at":       review.created_at
         })
 
     return result

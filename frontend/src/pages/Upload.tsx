@@ -110,6 +110,12 @@ export default function Upload() {
             {user?.full_name}
           </span>
           <button
+            onClick={() => navigate('/history')}
+            className="btn-secondary text-sm py-2 px-4"
+          >
+            History
+          </button>
+          <button
             onClick={logout}
             className="font-inter text-sm text-slate-500 
                        hover:text-slate-900 transition-colors"

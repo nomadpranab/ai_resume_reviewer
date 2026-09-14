@@ -45,7 +45,10 @@ class Review(Base):
     ats_score = Column(Float, nullable=False)          # 0-100
     overall_feedback = Column(Text, nullable=False)    # AI summary
     skill_gaps = Column(Text, nullable=False)          # JSON string
+
     improvements = Column(Text, nullable=False)        # JSON string
+    keywords_missing = Column(Text, nullable=False, default="[]")
+    strengths        = Column(Text, nullable=False, default="[]")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Foreign key: every review belongs to a resume

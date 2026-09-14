@@ -156,3 +156,57 @@ def delete_resume(
     db.commit()
 
     return {"message": "Resume deleted successfully"}
+
+@router.get("/history")
+def get_resume_history(
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """
+    Get all resumes with their latest review for the current user.
+
+    Returns:
+    [
+      {
+        resume_id: 1,
+        filename: "my_resume.pdf",
+        file_type: "pdf",
+        uploaded_at: "2026-09-01",
+        review_count: 3,
+        latest_score: 82,
+        latest_review_id: 7
+      }
+    ]
+    """
+
+    # Get all resumes for current user
+    resumes = db.query(models.Resume).filter(
+        models.Resume.user_id == current_user.id
+    ).order_by(models.Resume.uploaded_at.desc()).all()
+
+    history = []
+
+    for resume in resumes:
+        # Get all reviews for this resume
+        reviews = db.query(models.Review).filter(
+            models.Review.resume_id == resume.id
+        ).order_by(models.Review.created_at.desc()).all()
+
+        # Get latest review if exists
+        latest_review = reviews[0] if reviews else None
+
+        history.append({
+            "resume_id":        resume.id,
+            "filename":         resume.filename,
+            "file_type":        resume.file_type,
+            "uploaded_at":      resume.uploaded_at,
+            "review_count":     len(reviews),
+            "latest_score":     latest_review.ats_score if latest_review else None,
+            "latest_review_id": latest_review.id if latest_review else None,
+        })
+
+    return {
+        "history": history,
+        "total":   len(history),
+        "served_by": "backend"
+    }

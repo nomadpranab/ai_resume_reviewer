@@ -86,8 +86,6 @@ def analyze_resume(
         overall_feedback=ai_result["overall_feedback"],
         skill_gaps=json.dumps(ai_result["skill_gaps"]),
         improvements=json.dumps(ai_result["improvements"]),
-        keywords_missing = json.dumps(ai_result.get("keywords_missing", [])),
-        strengths        = json.dumps(ai_result.get("strengths", [])),
     )
 
     db.add(review)
@@ -137,17 +135,18 @@ def get_review_history(
 
     # Parse JSON strings back to lists
     result = []
+    
     for review in reviews:
-        result.append({
-            "review_id": review.id,
-            "ats_score": review.ats_score,
-            "overall_feedback": review.overall_feedback,
-            "skill_gaps": json.loads(review.skill_gaps),
-            "improvements": json.loads(review.improvements),
-            "keywords_missing": json.loads(review.keywords_missing),
-            "strengths":        json.loads(review.strengths),
-            "created_at": review.created_at
+    result.append({
+        "review_id": review.id,
+        "ats_score": review.ats_score,
+        "overall_feedback": review.overall_feedback,
+        "strengths": json.loads(review.strengths),
+        "skill_gaps": json.loads(review.skill_gaps),
+        "keywords_missing": json.loads(review.keywords_missing),
+        "improvements": json.loads(review.improvements),
+        "created_at": review.created_at
+    })
 
-        })
 
-    return result
+return result

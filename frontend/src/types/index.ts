@@ -42,3 +42,13 @@ export interface Review {
 export interface ApiError {
   detail: string
 }
+
+export interface ResumeHistory {
+  resume_id:        number
+  filename:         string
+  file_type:        string
+  uploaded_at:      string
+  review_count:     number
+  latest_score:     number | null
+  latest_review_id: number | null
+}

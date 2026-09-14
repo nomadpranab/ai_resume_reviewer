@@ -164,6 +164,12 @@ export default function Dashboard() {
           >
             New analysis
           </button>
+	  <button
+  		onClick={() => navigate('/history')}
+  	 	className="btn-secondary text-sm py-2 px-4"
+	  >
+	  History
+	</button>
           <button
             onClick={logout}
             className="font-inter text-sm text-slate-500

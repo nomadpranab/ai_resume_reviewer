@@ -1,0 +1,14 @@
+VPC: 10.0.0.0/16
+│
+├── Public Subnet (10.0.1.0/24) — AZ us-east-1a
+│   └── EC2 instance
+│   └── Elastic IP
+│
+├── Private Subnet 1 (10.0.2.0/24) — AZ us-east-1a
+│   └── RDS PostgreSQL (primary)
+│
+└── Private Subnet 2 (10.0.3.0/24) — AZ us-east-1b
+    └── RDS PostgreSQL (standby AZ)
+
+Internet Gateway → attached to VPC
+Route Table → public subnet → Internet Gateway

@@ -101,7 +101,7 @@ variable "db_name" {
 variable "db_username" {
   description = "PostgreSQL master username"
   type        = string
-  default     = "admin"
+  default     = "parindey"
 }
 
 variable "db_password" {
@@ -119,4 +119,35 @@ variable "s3_bucket_name" {
   description = "S3 bucket name for resume storage"
   type        = string
   # no default — bucket names must be globally unique
+}
+
+#--------------EC2 Configs------------------------------------------------------
+variable "aws_access_key_id" {
+  description = "AWS access key for EC2 to pull from ECR"
+  type        = string
+  sensitive   = true
+}
+
+variable "aws_secret_access_key" {
+  description = "AWS secret key for EC2 to pull from ECR"
+  type        = string
+  sensitive   = true
+}
+
+variable "secret_key" {
+  description = "JWT secret key for FastAPI"
+  type        = string
+  sensitive   = true
+}
+
+variable "gemini_api_key" {
+  description = "Google Gemini API key"
+  type        = string
+  sensitive   = true
+}
+
+variable "gemini_model" {
+  description = "Gemini model name"
+  type        = string
+  default     = "gemini-3-flash-preview"
 }

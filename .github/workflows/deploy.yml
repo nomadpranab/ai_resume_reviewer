@@ -81,7 +81,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key:      ${{ secrets.EC2_SSH_KEY }}
           envs:     ECR_REGISTRY,IMAGE_TAG,AWS_REGION
-            script: |
+          script: |
             echo "🚀 Deploying image tag: $IMAGE_TAG"
             export PATH=$PATH:/usr/local/bin
 

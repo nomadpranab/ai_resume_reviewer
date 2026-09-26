@@ -122,57 +122,48 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --force-recreate
 
             # ── Health check with retry-1 ──────────────────────────────────────
+                        # ── Health check with retry ──────────────────────────────────────
             echo "Waiting for application to start..."
             sleep 20
 
-            MAX_RETRIES=5
-            RETRY=0
-            HEALTH=""
+            DEPLOY_SUCCESS=false
 
-            while [ $RETRY -lt $MAX_RETRIES ]; do
+            for i in 1 2 3 4 5; do
               HEALTH=$(curl -s http://localhost/health)
-              echo "Health check attempt $((RETRY+1)): $HEALTH"
+              echo "Health check attempt $i: $HEALTH"
 
-              if echo $HEALTH | grep -q '"status":"healthy"'; then
+              if echo "$HEALTH" | grep -q '"status":"healthy"'; then
                 echo "✅ Health check passed"
+                DEPLOY_SUCCESS=true
                 break
               fi
 
-              RETRY=$((RETRY+1))
               echo "⏳ Retrying in 10 seconds..."
               sleep 10
             done
 
             # ── Rollback if health check failed ──────────────────────────────
-            if ! echo $HEALTH | grep -q "healthy"; then
-              echo "❌ Health check failed after $MAX_RETRIES attempts"
+            if [ "$DEPLOY_SUCCESS" = false ]; then
+              echo "❌ Health check failed after 5 attempts"
               echo "🔄 Rolling back to: $CURRENT_TAG"
 
-              # Restore docker-compose with previous tag
               sed -i "s|:$IMAGE_TAG|:$CURRENT_TAG|g" docker-compose.prod.yml
 
-              # Pull and restart previous version
               docker compose -f docker-compose.prod.yml pull
               docker compose -f docker-compose.prod.yml up -d --force-recreate
 
-              # Verify rollback worked
               sleep 15
               ROLLBACK_HEALTH=$(curl -s http://localhost/health)
 
-              if echo $ROLLBACK_HEALTH | grep -q "healthy"; then
+              if echo "$ROLLBACK_HEALTH" | grep -q '"status":"healthy"'; then
                 echo "✅ Rollback successful — previous version restored"
               else
-                echo "❌ Rollback also failed — manual intervention required"
+                echo "❌ Rollback failed — manual intervention required"
               fi
 
               exit 1
             fi
 
-            # ── Restore :latest tag in compose file ──────────────────────────
-            # Keep compose file using :latest for next deploy
             sed -i "s|:$IMAGE_TAG|:latest|g" docker-compose.prod.yml
-
-            # ── Cleanup old images ───────────────────────────────────────────
             docker image prune -f
-
             echo "🎉 Deployment complete: $IMAGE_TAG"

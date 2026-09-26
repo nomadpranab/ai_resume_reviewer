@@ -38,7 +38,7 @@ def startup():
 @app.get("/health")
 def health_check():
     return {
-        "status": "unhealthy",
+        "status": "healthy",
         "service": "ai-resume-reviewer-api"
     }
 

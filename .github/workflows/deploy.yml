@@ -20,8 +20,6 @@ jobs:
       - name: Set image tag
         id: set-tag
         run: |
-          # Use git commit SHA as image tag
-          # First 8 characters is enough — still unique
           echo "tag=${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
           echo "Building with tag: ${GITHUB_SHA::8}"
 
@@ -44,10 +42,8 @@ jobs:
             -t $ECR_REGISTRY/resume-reviewer/backend:$IMAGE_TAG \
             -t $ECR_REGISTRY/resume-reviewer/backend:latest \
             ./backend
-
           docker push $ECR_REGISTRY/resume-reviewer/backend:$IMAGE_TAG
           docker push $ECR_REGISTRY/resume-reviewer/backend:latest
-
           echo "✅ Backend pushed: $IMAGE_TAG"
 
       - name: Build and push frontend image
@@ -59,10 +55,8 @@ jobs:
             -t $ECR_REGISTRY/resume-reviewer/frontend:$IMAGE_TAG \
             -t $ECR_REGISTRY/resume-reviewer/frontend:latest \
             ./frontend
-
           docker push $ECR_REGISTRY/resume-reviewer/frontend:$IMAGE_TAG
           docker push $ECR_REGISTRY/resume-reviewer/frontend:latest
-
           echo "✅ Frontend pushed: $IMAGE_TAG"
 
   deploy:
@@ -74,18 +68,29 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set deploy environment variables
+        run: |
+          echo "IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}" >> $GITHUB_ENV
+          echo "ECR_REGISTRY=${{ secrets.ECR_REGISTRY }}" >> $GITHUB_ENV
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> $GITHUB_ENV
+
       - name: Deploy to EC2 via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
           host:     ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
           key:      ${{ secrets.EC2_SSH_KEY }}
-          envs:     ECR_REGISTRY,IMAGE_TAG,AWS_REGION
+          envs:     IMAGE_TAG,ECR_REGISTRY,AWS_REGION
           script: |
-            echo "🚀 Deploying image tag: $IMAGE_TAG"
+            echo "=== DEBUG ==="
+            echo "IMAGE_TAG=${IMAGE_TAG}"
+            echo "ECR_REGISTRY=${ECR_REGISTRY}"
+            echo "AWS_REGION=${AWS_REGION}"
+            echo "=== END DEBUG ==="
+
+            echo "Deploying image tag: $IMAGE_TAG"
             export PATH=$PATH:/usr/local/bin
 
-            # ── Login to ECR ────────────────────────────────────────────────
             /usr/local/bin/aws ecr get-login-password \
               --region $AWS_REGION | \
               docker login \
@@ -95,7 +100,6 @@ jobs:
 
             cd /home/ubuntu/app
 
-            # ── Save current running tag for rollback ────────────────────────
             CURRENT_TAG=$(docker inspect resume_backend \
               --format='{{index .Config.Image}}' 2>/dev/null | \
               rev | cut -d: -f1 | rev || echo "none")
@@ -103,66 +107,60 @@ jobs:
             echo "Current tag: $CURRENT_TAG"
             echo "New tag: $IMAGE_TAG"
 
-            # ── Always reset compose file to :latest ─────────────────────────
-            cat > docker-compose.prod.yml << 'COMPOSEEOF'
-            services:
-              backend:
-                image: ECR_BACKEND_IMAGE:latest
-                container_name: resume_backend
-                env_file:
-                  - .env.production
-                restart: unless-stopped
-                networks:
-                  - resume-network
+            python3 -c "
+content = '''services:
+  backend:
+    image: BACKEND_IMAGE:latest
+    container_name: resume_backend
+    env_file:
+      - .env.production
+    restart: unless-stopped
+    networks:
+      - resume-network
 
-              frontend:
-                image: ECR_FRONTEND_IMAGE:latest
-                container_name: resume_frontend
-                restart: unless-stopped
-                networks:
-                  - resume-network
+  frontend:
+    image: FRONTEND_IMAGE:latest
+    container_name: resume_frontend
+    restart: unless-stopped
+    networks:
+      - resume-network
 
-              nginx:
-                image: nginx:alpine
-                container_name: resume_nginx
-                ports:
-                  - "80:80"
-                volumes:
-                  - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-                depends_on:
-                  - backend
-                  - frontend
-                restart: unless-stopped
-                networks:
-                  - resume-network
+  nginx:
+    image: nginx:alpine
+    container_name: resume_nginx
+    ports:
+      - \"80:80\"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+      - frontend
+    restart: unless-stopped
+    networks:
+      - resume-network
 
-            networks:
-              resume-network:
-                driver: bridge
-            COMPOSEEOF
+networks:
+  resume-network:
+    driver: bridge
+'''
+with open('docker-compose.prod.yml', 'w') as f:
+    f.write(content)
+print('Compose file written')
+"
 
-            # Replace placeholder with actual ECR registry
-            sed -i "s|ECR_BACKEND_IMAGE|$ECR_REGISTRY/resume-reviewer/backend|g" docker-compose.prod.yml
-            sed -i "s|ECR_FRONTEND_IMAGE|$ECR_REGISTRY/resume-reviewer/frontend|g" docker-compose.prod.yml
-
-            echo "✅ Compose file reset to :latest"
-
-            # ── Replace :latest with specific SHA tag ────────────────────────
+            sed -i "s|BACKEND_IMAGE|$ECR_REGISTRY/resume-reviewer/backend|g" docker-compose.prod.yml
+            sed -i "s|FRONTEND_IMAGE|$ECR_REGISTRY/resume-reviewer/frontend|g" docker-compose.prod.yml
             sed -i "s|:latest|:$IMAGE_TAG|g" docker-compose.prod.yml
 
-            echo "✅ Compose file updated to: $IMAGE_TAG"
+            echo "Compose file after update:"
             cat docker-compose.prod.yml | grep image
 
-            # ── Pull new images ──────────────────────────────────────────────
             docker compose -f docker-compose.prod.yml pull
-
-            # ── Deploy new containers ────────────────────────────────────────
             docker compose -f docker-compose.prod.yml up -d --force-recreate
 
             echo "Waiting for application to start..."
             sleep 20
 
-            # ── Health check with retry ──────────────────────────────────────
             DEPLOY_SUCCESS=false
 
             for i in 1 2 3 4 5; do
@@ -170,25 +168,23 @@ jobs:
               echo "Health check attempt $i: $HEALTH"
 
               if echo "$HEALTH" | grep -q '"status":"healthy"'; then
-                echo "✅ Health check passed"
+                echo "Health check passed"
                 DEPLOY_SUCCESS=true
                 break
               fi
 
               if [ $i -lt 5 ]; then
-                echo "⏳ Retrying in 10 seconds..."
+                echo "Retrying in 10 seconds..."
                 sleep 10
               fi
             done
 
             echo "Deploy success: $DEPLOY_SUCCESS"
 
-            # ── Rollback if health check failed ──────────────────────────────
             if [ "$DEPLOY_SUCCESS" != "true" ]; then
-              echo "❌ Health check failed after 5 attempts"
-              echo "🔄 Rolling back to: $CURRENT_TAG"
+              echo "Health check failed after 5 attempts"
+              echo "Rolling back to: $CURRENT_TAG"
 
-              # Reset compose and use previous tag
               sed -i "s|:$IMAGE_TAG|:$CURRENT_TAG|g" docker-compose.prod.yml
 
               docker compose -f docker-compose.prod.yml pull
@@ -198,22 +194,15 @@ jobs:
               ROLLBACK_HEALTH=$(curl -s http://localhost/health)
 
               if echo "$ROLLBACK_HEALTH" | grep -q '"status":"healthy"'; then
-                echo "✅ Rollback successful — previous version restored"
+                echo "Rollback successful"
               else
-                echo "❌ Rollback failed — manual intervention required"
+                echo "Rollback failed - manual intervention required"
               fi
 
-              # Restore :latest for next deploy
               sed -i "s|:$CURRENT_TAG|:latest|g" docker-compose.prod.yml
-              echo "♻️ Restored compose file to :latest"
-
               exit 1
             fi
 
-            # ── Restore :latest for next deploy ──────────────────────────────
             sed -i "s|:$IMAGE_TAG|:latest|g" docker-compose.prod.yml
-            echo "♻️ Restored compose file to :latest"
-
-            # ── Cleanup ──────────────────────────────────────────────────────
             docker image prune -f
-            echo "🎉 Deployment complete: $IMAGE_TAG"
+            echo "Deployment complete: $IMAGE_TAG"

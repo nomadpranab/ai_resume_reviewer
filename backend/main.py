@@ -45,3 +45,5 @@ def health_check():
 @app.get("/")
 def root():
     return {"message": "AI Resume Reviewer API is running"}
+
+raise Exception("Simulated deployment failure")

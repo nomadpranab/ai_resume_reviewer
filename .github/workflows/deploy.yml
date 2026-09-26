@@ -143,10 +143,11 @@ jobs:
             done
 
             # ── Rollback if health check failed ──────────────────────────────
-            if [ "$DEPLOY_SUCCESS" = false ]; then
+                        if [ "$DEPLOY_SUCCESS" = false ]; then
               echo "❌ Health check failed after 5 attempts"
               echo "🔄 Rolling back to: $CURRENT_TAG"
 
+              # Restore previous tag
               sed -i "s|:$IMAGE_TAG|:$CURRENT_TAG|g" docker-compose.prod.yml
 
               docker compose -f docker-compose.prod.yml pull
@@ -161,9 +162,10 @@ jobs:
                 echo "❌ Rollback failed — manual intervention required"
               fi
 
+              # ← ADD THIS: Always restore :latest after rollback
+              # So next deploy works correctly
+              sed -i "s|:$CURRENT_TAG|:latest|g" docker-compose.prod.yml
+              echo "♻️ Restored docker-compose to :latest for next deploy"
+
               exit 1
             fi
-
-            sed -i "s|:$IMAGE_TAG|:latest|g" docker-compose.prod.yml
-            docker image prune -f
-            echo "🎉 Deployment complete: $IMAGE_TAG"

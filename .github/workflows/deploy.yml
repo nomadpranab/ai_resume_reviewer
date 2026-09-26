@@ -133,7 +133,7 @@ jobs:
               HEALTH=$(curl -s http://localhost/health)
               echo "Health check attempt $((RETRY+1)): $HEALTH"
 
-              if echo $HEALTH | grep -q "healthy"; then
+              if echo $HEALTH | grep -q '"status": "healthy"'; then
                 echo "✅ Health check passed"
                 break
               fi

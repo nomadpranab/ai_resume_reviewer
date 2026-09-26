@@ -132,7 +132,7 @@ jobs:
               HEALTH=$(curl -s http://localhost/health)
               echo "Health check attempt $i: $HEALTH"
 
-              if echo "$HEALTH" | grep -q '"status":"healthy"'; then
+              if echo "$HEALTH" | grep -q '"status": "healthy"'; then
                 echo "✅ Health check passed"
                 DEPLOY_SUCCESS=true
                 break

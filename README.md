@@ -761,47 +761,67 @@ Every push to `main` triggers the pipeline automatically.
 
 ## Project Structure
 
-
+```text
 ai-resume-reviewer/
-|
-|-- backend/
-| |-- main.py FastAPI app entry point and startup
-| |-- auth.py JWT creation, verification, bcrypt hashing
-| |-- database.py SQLAlchemy engine and session factory
-| |-- models.py User, Resume, Review table definitions
-| |-- schemas.py Pydantic request and response models
-| |-- s3_service.py S3 upload, download, presigned URL generation
-| |-- ai_service.py Gemini API integration, PDF and DOCX text extraction
-| |-- requirements.txt
-| |-- Dockerfile Multi-stage: python:3.11-slim
-| |-- routes/
-| |-- auth.py POST /api/auth/register, /login GET /api/auth/me
-| |-- resume.py POST /api/resume/upload GET /api/resume/list, /history
-| |-- review.py POST /api/review/{id}/analyze GET /api/review/{id}/history
-|
-|-- frontend/
-| |-- src/
-| | |-- pages/ Landing Login Register Upload Processing Dashboard History
-| | |-- context/ AuthContext.tsx JWT state management
-| | |-- services/ api.ts axios client with interceptors
-| | |-- types/ TypeScript interfaces
-| |-- nginx.conf SPA fallback: try_files $uri /index.html
-| |-- Dockerfile Multi-stage: node:20-alpine then nginx:alpine
-|
-|-- nginx/
-| |-- nginx.conf Reverse proxy: /api/* to backend, /* to frontend
-|
-|-- infrastructure/
-| |-- terraform/
-| |-- main.tf VPC, EC2, RDS, S3, ECR, Security Groups, EIP
-| |-- variables.tf Variable definitions with types and descriptions
-| |-- outputs.tf EC2 IP, RDS endpoint, ECR URLs, SSH command
-| |-- terraform.tfvars Actual values (gitignored, never committed)
-|
-|-- .github/
-| |-- workflows/
-| |-- deploy.yml Build push deploy pipeline
-|
-|-- docker-compose.yml Local development: postgres backend frontend nginx
+├── backend/
+│   ├── main.py                  # FastAPI application entry point and startup
+│   ├── auth.py                  # JWT creation/verification and bcrypt hashing
+│   ├── database.py              # SQLAlchemy engine and session factory
+│   ├── models.py                # User, Resume, and Review table definitions
+│   ├── schemas.py               # Pydantic request/response models
+│   ├── s3_service.py            # S3 upload, download, and presigned URL generation
+│   ├── ai_service.py            # Gemini API integration and PDF/DOCX text extraction
+│   ├── requirements.txt         # Python dependencies
+│   ├── Dockerfile               # Multi-stage build using python:3.11-slim
+│   │
+│   └── routes/
+│       ├── auth.py              # POST /api/auth/register
+│       │                          # POST /api/auth/login
+│       │                          # GET  /api/auth/me
+│       ├── resume.py            # POST /api/resume/upload
+│       │                          # GET  /api/resume/list
+│       │                          # GET  /api/resume/history
+│       └── review.py            # POST /api/review/{id}/analyze
+│                                  # GET  /api/review/{id}/history
+│
+├── frontend/
+│   ├── src/
+│   │   ├── pages/               # Landing, Login, Register, Upload,
+│   │   │                          # Processing, Dashboard, and History
+│   │   ├── context/
+│   │   │   └── AuthContext.tsx  # JWT state management
+│   │   ├── services/
+│   │   │   └── api.ts           # Axios client with interceptors
+│   │   └── types/               # TypeScript interfaces
+│   │
+│   ├── nginx.conf               # SPA fallback configuration
+│   │                            # try_files $uri /index.html
+│   └── Dockerfile               # Multi-stage build:
+│                                  # node:20-alpine → nginx:alpine
+│
+├── nginx/
+│   └── nginx.conf               # Reverse proxy:
+│                                  # /api/* → backend
+│                                  # /*     → frontend
+│
+├── infrastructure/
+│   └── terraform/
+│       ├── main.tf              # VPC, EC2, RDS, S3, ECR,
+│       │                          # Security Groups, and EIP
+│       ├── variables.tf         # Variable definitions,
+│       │                          # types, and descriptions
+│       ├── outputs.tf           # EC2 IP, RDS endpoint,
+│       │                          # ECR URLs, and SSH command
+│       └── terraform.tfvars     # Actual values (gitignored,
+│                                  #                          never committed)
+│
+├── .github/
+│   └── workflows/
+│       └── deploy.yml           # Build → Push → Deploy CI/CD pipeline
+│
+└── docker-compose.yml           # Local development:
+                                 # PostgreSQL, backend, frontend, and Nginx
+```
+
 
 

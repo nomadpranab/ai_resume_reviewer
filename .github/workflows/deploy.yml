@@ -1,4 +1,3 @@
-cat > .github/workflows/deploy.yml << 'WORKFLOWEOF'
 name: Build and Deploy
 
 on:

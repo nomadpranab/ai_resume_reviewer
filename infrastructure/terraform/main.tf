@@ -430,9 +430,6 @@ resource "aws_eip" "server" {
   # depends_on ensures internet gateway exists
   # before we try to create the EIP
   depends_on = [aws_internet_gateway.main]
- lifecycle {
-    prevent_destroy = true
-  }
   tags = merge(local.common_tags, {
     Name = "${var.project_name}-eip"
   })
